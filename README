@@ -1,0 +1,97 @@
+This directory contains release 2.0 of nssharechannel module
+for AOLserver.
+
+It was written by Jean-Fabrice Rabaute (jfr@core-services.fr).
+
+This module is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License, as
+published by the Free Software Foundation;
+
+How to use:
+===========
+
+* IMPORTANT NOTE :
+     
+     This problem has been in TCL version 8.4 and more.
+     If you are using AS4.0 or AS3.x with TCL 8.4 forget this WARNING
+     
+     WARNING TCL < 8.4 :
+     Due to a bug I cannot solve, the shared channel will be opened forever.
+     So do not forget to flush the channel !! That's really important.
+     The problem is that calling Tcl_UnregisterChannel with "interp" parameter
+     as NULL results in a panic "FlushChannel: damaned channel list" ! This panic
+     error is raised in the "CloseChannel" function in the tclIO.c file.
+     I tried to understand the problem but couldn't find it !
+     (perhaps a TCL bug ....)
+     
+     CONSEQUENCE :
+     This problem may result in a growing memory if you use tons of shared channels
+     (because the channel structure will never be deallocated because attached to the 
+     NULL interpreter). But for a standard usage it should be OK.
+     
+     For my usage, I open a socket indefinitely so I don't care
+     about closing the channel.
+
+* ns_detachfile
+     after opening a channel in a TCL script, you can call ns_detachfile passing the
+     channel name to detach the channel. The channel is STILL avalaible in the script
+     but won't be closed at the end of the script.
+     You can use "nsv_set" to save the channel name
+
+* ns_attachfile
+     You can call ns_attachfile passing the channel name to attach the channel to the
+     actual interpreter. The channel will become available and you'll be able to use
+     the standard "puts", "gets" and "flush" TCL command. You can "close" the channel
+     but it has no effect, SO DON'T FORGET TO FLUSH IT BEFORE THE END OF YOUR SCRIPT !
+     
+* ns_closesharedchannel
+     Passing the channel name, it will close the shared channel. The channel will be
+     still opened in the local TCL interp. It is your responsability to close it
+     by calling the TCL "close" command.
+
+How to Build:
+=============
+
+* Requires GNU Make (available from the GNU project at
+  http://www.gnu.org.  It is usually called "make-*.tar.gz" on the GNU ftp
+  sites)
+
+* Edit the Makefile and set NSHOME to the location of your AOLserver
+  source or binary tree.
+
+* Run "make" or "gmake" (whichever is GNU Make).
+
+* Run "make install" or copy "nssharechannel.so" to your
+  AOLserver bin directory.
+
+
+What's New:
+
+2.0: Added C functions ns_DetachTclChannel, Ns_AttachTclChannelByName.
+
+     Added TCL function ns_closesharedchannel and C function
+     Ns_CloseSharedChannel for server using TCL version >= 8.4
+     
+     If TCL version >= 8.4 at compile time, the module will close
+     all the remaining shared channel at server shutdown.
+
+1.1: Using TCL_HashTable to save data.
+	 "MaxSharedChannels" is now USELESS.
+     
+     For info my environment is the following :
+     - SunOS 5.7 on a Netra machine
+     - AOLServer 3.2 running Tcl7.6
+     - Oracle driver 2.5
+     
+1.0: First version of the nssharefd module for AOLServer.
+     The TCL commands are created that allows to detach and attach channels :
+     ns_detachchannel channelID -> in the interp which open the channel
+     ns_attachchannel channelID -> in the interp which want to use the channel
+     
+     You can use the "nsv_set" functions to share the channelID.
+     The default number of channels you can share is 10.
+     You can change it :
+     
+     ns_section "ns/server/${server_name}/module/nssharefd"
+     ns_param	MaxSharedChannels 20
+
